@@ -3,6 +3,7 @@ from uuid import uuid4
 
 from fastapi import APIRouter, Body, HTTPException, status
 from pydantic import UUID4
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.future import select
 
 from workout_api.atleta.schemas import (
@@ -78,7 +79,17 @@ async def post(
         db_session.add(atleta_model)
         await db_session.commit()
 
+    except IntegrityError:
+        await db_session.rollback()
+
+        raise HTTPException(
+            status_code=status.HTTP_303_SEE_OTHER,
+            detail=f'Já existe um atleta cadastrado com o cpf: {atleta_in.cpf}'
+        )
+
     except Exception:
+        await db_session.rollback()
+
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail='Ocorreu um erro ao inserir os dados no banco'
