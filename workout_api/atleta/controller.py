@@ -5,8 +5,13 @@ from fastapi import APIRouter, Body, HTTPException, status
 from pydantic import UUID4
 from sqlalchemy.future import select
 
+from workout_api.atleta.schemas import (
+    AtletaIn,
+    AtletaOut,
+    AtletaOutList,
+    AtletaUpdate
+)
 from workout_api.atleta.models import AtletaModel
-from workout_api.atleta.schemas import AtletaIn, AtletaOut, AtletaUpdate
 from workout_api.categorias.models import CategoriaModel
 from workout_api.centro_treinamento.models import CentroTreinamentoModel
 from workout_api.contrib.dependencies import DatabaseDependency
@@ -86,13 +91,13 @@ async def post(
     '/',
     summary='Consultar todos os Atletas',
     status_code=status.HTTP_200_OK,
-    response_model=list[AtletaOut],
+    response_model=list[AtletaOutList],
 )
 async def query(
     db_session: DatabaseDependency,
     nome: str | None = None,
     cpf: str | None = None,
-) -> list[AtletaOut]:
+) -> list[AtletaOutList]:
 
     query = select(AtletaModel)
 
@@ -113,7 +118,7 @@ async def query(
     )
 
     return [
-        AtletaOut.model_validate(atleta)
+        AtletaOutList.model_validate(atleta)
         for atleta in atletas
     ]
 
@@ -203,4 +208,3 @@ async def delete(
 
     await db_session.delete(atleta)
     await db_session.commit()
-
