@@ -6,6 +6,9 @@ from pydantic import UUID4
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.future import select
 
+from fastapi_pagination import LimitOffsetPage, LimitOffsetParams
+from fastapi_pagination.ext.sqlalchemy import paginate
+
 from workout_api.atleta.schemas import (
     AtletaIn,
     AtletaOut,
@@ -102,14 +105,14 @@ async def post(
     '/',
     summary='Consultar todos os Atletas',
     status_code=status.HTTP_200_OK,
-    response_model=list[AtletaOutList],
+    response_model=LimitOffsetPage[AtletaOutList],
 )
 async def query(
     db_session: DatabaseDependency,
     nome: str | None = None,
     cpf: str | None = None,
-) -> list[AtletaOutList]:
-
+    params: LimitOffsetParams = None,
+):
     query = select(AtletaModel)
 
     if nome:
@@ -122,16 +125,11 @@ async def query(
             AtletaModel.cpf == cpf
         )
 
-    atletas: list[AtletaModel] = (
-        (await db_session.execute(query))
-        .scalars()
-        .all()
+    return await paginate(
+        db_session,
+        query,
+        params
     )
-
-    return [
-        AtletaOutList.model_validate(atleta)
-        for atleta in atletas
-    ]
 
 
 @router.get(
@@ -145,7 +143,7 @@ async def get(
     db_session: DatabaseDependency
 ) -> AtletaOut:
 
-    atleta: AtletaOut = (
+    atleta = (
         await db_session.execute(
             select(AtletaModel).filter_by(id=id)
         )
@@ -172,7 +170,7 @@ async def patch(
     atleta_up: AtletaUpdate = Body(...)
 ) -> AtletaOut:
 
-    atleta: AtletaOut = (
+    atleta = (
         await db_session.execute(
             select(AtletaModel).filter_by(id=id)
         )
@@ -205,7 +203,7 @@ async def delete(
     db_session: DatabaseDependency
 ) -> None:
 
-    atleta: AtletaOut = (
+    atleta = (
         await db_session.execute(
             select(AtletaModel).filter_by(id=id)
         )
